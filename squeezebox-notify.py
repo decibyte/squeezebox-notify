@@ -10,27 +10,31 @@ players = {}
 notification = pynotify.Notification('Squuezebox Notification')
 
 class Player():
+    id = None
     name = None
+    fetcher = None
 
-    def __init__(self, name):
-        pynotify.init('squeezebox-notify-%s' % name)
+    def __init__(self, id, name, fetcher):
+        self.id = id
         self.name = name
+        self.fetcher = fetcher
 
 def get_player_info(fetcher, player_mac):
     if not player_mac in players.keys():
         fetcher.write('player name %s ?\n' % player_mac)
-        name = fetcher.read_until('\n').replace('player name %s ' % player_mac, '').replace('\n', '')
-        players[player_mac] = Player(name)
+        name = fetcher.read_until('\n').replace('player name %s ' % player_mac, '').rstrip('\n')
+        players[player_mac] = Player(player_mac, name, fetcher)
     return players[player_mac]
 
-def notify(player, cmd):
+def notify(player, cmd, server, port, www_port):
     # Only show notifications that we know how to handle.
     known_notifications = {
-        'playlist pause' : notifications.pause
+        'playlist pause' : notifications.pause,
+        'playlist newsong' : notifications.new_song,
     }
     for notif in known_notifications.keys():
         if cmd.startswith(notif):
-            title, body, icon = known_notifications[notif](player, cmd)
+            title, body, icon = known_notifications[notif](player, cmd, server, port, www_port)
             notification.update(title, body, icon if icon else DEFAULT_ICON_LOCATION)
             notification.show()
 
@@ -44,7 +48,9 @@ Usage: squeezebox-notify [options] <server>
 
 Options:
 
-  -p      port number (default is 9090)
+  -p      port number of telnet interface (default is 9090)
+
+  -w      port number of web interface (default is 9000)
 """
 
 if __name__ == '__main__':
@@ -62,12 +68,21 @@ if __name__ == '__main__':
     else:
         server = args[0]
 
-    # Set server port.
+    # Set server telnet port.
     port = 9090
     for opt, arg in opts:
         if opt == '-p':
             try:
                 port = int(arg)
+            except ValueError:
+                print_help()
+
+    # Set server web port.
+    www_port = 9000
+    for opt, arg in opts:
+        if opt == '-w':
+            try:
+                www_port = int(arg)
             except ValueError:
                 print_help()
     
@@ -99,5 +114,5 @@ if __name__ == '__main__':
             # First, get info about the player.
             player = get_player_info(fetcher, m.group(1))
             # Then, notify.
-            notify(player, m.group(3).replace('\n', ''))
+            notify(player, m.group(3).replace('\n', ''), server, port, www_port)
 
