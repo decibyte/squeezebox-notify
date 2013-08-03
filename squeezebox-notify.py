@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from telnetlib import Telnet
-import sys, getopt, re, pynotify
+import sys, getopt, re, pynotify, notifications
 
 DEFAULT_ICON_LOCATION = '/home/mmm/kode/squeezebox-notify/resources/squeezebox.jpg'
 
@@ -24,8 +24,15 @@ def get_player_info(fetcher, player_mac):
     return players[player_mac]
 
 def notify(player, cmd):
-    notification.update(player.name, cmd, DEFAULT_ICON_LOCATION)
-    notification.show()
+    # Only show notifications that we know how to handle.
+    known_notifications = {
+        'playlist pause' : notifications.pause
+    }
+    for notif in known_notifications.keys():
+        if cmd.startswith(notif):
+            title, body, icon = known_notifications[notif](player, cmd)
+            notification.update(title, body, icon if icon else DEFAULT_ICON_LOCATION)
+            notification.show()
 
 def print_help():
     print """
@@ -89,8 +96,8 @@ if __name__ == '__main__':
         m = player_pattern.match(data)
         # If it looks like a player related notification, break it apart and find out what it's about.
         if m:
-            # First, get info about the player
+            # First, get info about the player.
             player = get_player_info(fetcher, m.group(1))
-            # Then, notify
-            notify(player, m.group(3))
+            # Then, notify.
+            notify(player, m.group(3).replace('\n', ''))
 
