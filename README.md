@@ -1,4 +1,4 @@
 squeezebox-notify
 =================
 
-Get Squeezebox "now playing" notification in Ubuntu (and anything else supporting libnotify)
+Get Squeezebox "now playing" notifications in Ubuntu (and anything else supporting libnotify)
