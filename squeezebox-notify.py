@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 
 from telnetlib import Telnet
-import sys, getopt, re, pynotify, notifications
+import getopt, notifications, pynotify, re, sys, urllib
 
 DEFAULT_ICON_LOCATION = '/home/mmm/kode/squeezebox-notify/resources/squeezebox.jpg'
 
 players = {}
 notification = pynotify.Notification('Squuezebox Notification')
 
+# TODO: Move the Player class to a separate file.
 class Player():
     id = None
     name = None
@@ -18,6 +19,18 @@ class Player():
         self.id = id
         self.name = name
         self.fetcher = fetcher
+
+    def get_track_id(self):
+        self.fetcher.write('%s status - 1 tags:\n' % player.id)
+        return [urllib.unquote(x) for x in self.fetcher.read_until('\n').split(' ') if urllib.unquote(x).startswith('id:')][0].lstrip('id:')
+
+    def get_current_title(self):
+        self.fetcher.write('%s current_title ?\n' % player.id)
+        return urllib.unquote(self.fetcher
+            .read_until('\n')
+            .replace('%s current_title ' % player.id, '')
+            .rstrip('\n')
+        )
 
 def get_player_info(fetcher, player_mac):
     if not player_mac in players.keys():
