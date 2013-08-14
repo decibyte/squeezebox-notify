@@ -48,9 +48,9 @@ Usage: squeezebox-notify [options] <server>
 
 Options:
 
-  -p      port number of telnet interface (default is 9090)
+  -p      Port number of telnet interface (default is 9090)
 
-  -w      port number of web interface (default is 9000)
+  -w      Port number of web interface (default is 9000)
 """
 
 if __name__ == '__main__':

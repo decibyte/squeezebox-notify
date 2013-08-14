@@ -19,7 +19,7 @@ def pause(player, notification, server, port, www_port):
 def new_song(player, notification, server, port, www_port):
     player.fetcher.write('%s status - 1 tags:\n' % player.id)
     track_id = [urllib.unquote(x) for x in player.fetcher.read_until('\n').split(' ') if urllib.unquote(x).startswith('id:')][0].lstrip('id:')
-    cache_path = os.path.abspath('./') + '/cache'
+    cache_path = '/'.join(os.path.abspath(__file__).split('/')[:-1]) + '/cache'
     cover_path = '%s/%s.jpg' % (cache_path, track_id,)
     if not os.path.exists(cover_path):
         cover_url = 'http://%s:%i/music/%s/cover.jpg' % (server, www_port, track_id,)
