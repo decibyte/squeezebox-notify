@@ -17,7 +17,7 @@ class Player():
 
     def __init__(self, id, name, fetcher):
         self.id = id
-        self.name = name
+        self.name = urllib.unquote(name)
         self.fetcher = fetcher
 
     def get_track_id(self):
@@ -69,7 +69,7 @@ Options:
 if __name__ == '__main__':
     # Get arguments and options.
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 's:p:')
+        opts, args = getopt.getopt(sys.argv[1:], 'w:p:')
     except getopt.GetoptError:
         print_help()
         sys.exit(2)
