@@ -39,7 +39,7 @@ def get_player_info(fetcher, player_mac):
         players[player_mac] = Player(player_mac, name, fetcher)
     return players[player_mac]
 
-def notify(player, cmd, server, port, www_port):
+def notify(player, cmd, server, port, www_port, username=None, password=None):
     # Only show notifications that we know how to handle.
     known_notifications = {
         'playlist pause' : notifications.pause,
@@ -47,7 +47,7 @@ def notify(player, cmd, server, port, www_port):
     }
     for notif in known_notifications.keys():
         if cmd.startswith(notif):
-            title, body, icon = known_notifications[notif](player, cmd, server, port, www_port)
+            title, body, icon = known_notifications[notif](player, cmd, server, port, www_port, username, password)
             notification.update(title, body, icon if icon else DEFAULT_ICON_LOCATION)
             notification.show()
 
@@ -61,7 +61,13 @@ Usage: squeezebox-notify [options] <server>
 
 Options:
 
+  -s      Server hostname.
+
   -p      Port number of telnet interface (default is 9090)
+
+  -u      Username for authentication
+
+  -P      Password for authentication
 
   -w      Port number of web interface (default is 9000)
 """
@@ -69,26 +75,31 @@ Options:
 if __name__ == '__main__':
     # Get arguments and options.
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'w:p:')
+        opts, args = getopt.getopt(sys.argv[1:], 's:w:p:u:P:')
     except getopt.GetoptError:
         print_help()
         sys.exit(2)
 
-    # Only allow a single argument, the server address.
-    if len(args) != 1:
-        print_help()
-        sys.exit(2)
-    else:
-        server = args[0]
-
     # Set server telnet port.
+    server = None
     port = 9090
+    username = None
+    password = None
     for opt, arg in opts:
+        if opt == '-s':
+            if not arg:
+                print_help()
+                sys.exit(2)
+            server = arg
         if opt == '-p':
             try:
                 port = int(arg)
             except ValueError:
                 print_help()
+        if opt == '-u':
+            username = arg
+        if opt == '-P':
+            password = arg
 
     # Set server web port.
     www_port = 9000
@@ -98,14 +109,14 @@ if __name__ == '__main__':
                 www_port = int(arg)
             except ValueError:
                 print_help()
-    
+
     # Initialise notifications.
     pynotify.init('squeezebox-notify')
     notification = pynotify.Notification('Squeezebox Notify',
         'Connecting to %s' % (server if port == 9090 else ('%s:%i' % (server, port,))),
         '/home/mmm/kode/squeezebox-notify/resources/squeezebox.jpg')
     notification.show()
-    
+
     # Compile a regex for player related notifications, which are identified by a MAC address and then some.
     player_pattern = re.compile('^(([0-9a-f]{2}%3A){5}[0-9a-f]{2}) (.+)')
 
@@ -114,6 +125,18 @@ if __name__ == '__main__':
     listener.open(server, port)
     fetcher = Telnet()
     fetcher.open(server, port)
+    # Authenticate, if necessary.
+    if username and password:
+        listener.write('login %s %s\n' % (
+            urllib.quote(username),
+            urllib.quote(password),
+        ))
+        listener.read_until('\n')
+        fetcher.write('login %s %s\n' % (
+            urllib.quote(username),
+            urllib.quote(password),
+        ))
+        fetcher.read_until('\n')
     listener.write('listen 1\n')
 
     # Start listening for server notifications and process them.
